@@ -13,14 +13,20 @@ RUN cd / && \
     git clone https://github.com/apache/spark.git --branch v${SPARK_VERSION} --single-branch && \
     cd /spark && \
     dev/make-distribution.sh \
-        --name spark --tgz \
+        --name hadoop-${HADOOP_VERSION}-cloud-scala-${SCALA_VERSION} --tgz \
         -Phadoop-${HADOOP_VERSION} \
         -Pscala-${SCALA_VERSION} \
         -Pkubernetes \
         -Phive \
         -Phive-thriftserver && \
-    cp spark.tgz /
+    cp spark-${SPARK_VERSION}-bin-hadoop-${HADOOP_VERSION}-cloud-scala-${SCALA_VERSION}.tgz /
 
+RUN mkdir /spark-dist && \
+    cd /spark-dist && \
+    mv /spark-${SPARK_VERSION}-bin-hadoop-${HADOOP_VERSION}-cloud-scala-${SCALA_VERSION}.tgz  /spark-dist && \
+    tar -zxvf spark-${SPARK_VERSION}-bin-hadoop-${HADOOP_VERSION}-cloud-scala-${SCALA_VERSION}.tgz && \
+    mv spark-${SPARK_VERSION}-bin-hadoop-${HADOOP_VERSION}-cloud-scala-${SCALA_VERSION} spark
+    
 ### Final Container
 FROM openjdk:${java_image_tag}
 
@@ -52,10 +58,8 @@ ENV SPARK_CONF_DIR  $SPARK_HOME/conf
 ENV SPARK_WORK_DIR  $SPARK_HOME/work-dir
 
 ### install spark
-COPY --from=builder /spark.tgz /
-RUN tar -xzf /spark.tgz -C /opt/ && \
-    rm -f /spark.tgz && \
-    mkdir -p $SPARK_HOME/work-dir && \
+COPY --from=builder /spark-dist/spark $SPARK_HOME
+RUN mkdir -p $SPARK_HOME/work-dir && \
     mkdir -p $SPARK_HOME/spark-warehouse
 
 COPY entrypoint.sh /opt/
